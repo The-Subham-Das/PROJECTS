@@ -1,0 +1,157 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+data = read.csv("D:/Fish.csv")
+View(data)
+```
+
+```{r}
+head(data)
+```
+
+```{r}
+tail(data)
+```
+
+```{r}
+summary(data)
+```
+
+```{r}
+str(data)
+```
+
+```{r}
+dim(data)
+```
+
+```{r}
+colSums(is.na(data))
+```
+
+```{r}
+colnames(data)
+```
+
+```{r}
+d<-na.omit(data)
+colSums(is.na(d))
+```
+
+
+EDA PART:
+
+```{r}
+library(ggcorrplot)
+corr=cor(d[,2:7])
+ggcorrplot(corr, lab = TRUE)
+```
+
+```{r}
+ggplot(data = d)+
+  geom_bar(mapping = aes(y = d$Weight, x = d$ï..Species, fill = d$ï..Species), stat= "identity") +
+  labs(title="weight per Species", x="Species", y="Weight in Grams")
+```
+
+```{r}
+ggplot(data = d)+
+  geom_point(mapping = aes(y = d$Weight, x = d$Length1, col = d$ï..Species), stat= "identity") +
+  labs(title="Weight per Species", x="Length", y="Weight in Grams")
+```
+
+```{r}
+ggplot(data = d,mapping = aes(y = d$Weight,col=d$ï..Species), stat= "identity")+
+  geom_boxplot() +
+  labs(title="weight per Species", x="Species", y="Weight in Grams")
+```
+
+```{r}
+ggplot(d,aes(x=d$ï..Species,y=d$Weight,fill=d$ï..Species))+geom_boxplot()
+```
+
+```{r}
+ggplot(d,aes(x=d$ï..Species,y=d$Length1,fill=d$ï..Species))+geom_boxplot()
+```
+
+```{r}
+ggplot(d,aes(x=d$ï..Species,y=d$Height,fill=d$ï..Species))+geom_boxplot()
+```
+
+From the boxplots above, we can see that for Roach, there are at least one outlier for all the variables.
+To further check the outliers, we can check the quantile.
+Quantile for species Roach, in Weight:
+
+```{r}
+library(dplyr)
+```
+
+```{r}
+d_Roach <- d %>% filter(d$ï..Species == 'Roach')
+quantile(d_Roach$Weight)
+
+```
+
+From the quantile, we can tell that the last quantile is far from the rest of the quantiles, so this is the outlier situation.
+
+To deal with this situation, we removed the outlier from the dataset.
+
+```{r}
+D_out <- d %>% filter(d$ï..Species == 'Roach' & Weight > 177.25 ) #assign the outlier data where the Species = 'Roach' and Weight> 177.25
+nrow(D_out)
+```
+
+```{r}
+d_new <-anti_join(d,D_out)
+nrow(d_new)
+```
+
+```{r}
+ggplot(d_new,aes(x=d_new$ï..Species,y=d_new$Weight,fill=d_new$ï..Species))+geom_boxplot()
+```
+
+```{r}
+ggplot(d_new,aes(x=d_new$ï..Species,y=d_new$Length1,fill=d_new$ï..Species))+geom_boxplot()
+```
+
+```{r}
+ggplot(d_new,aes(x=d_new$ï..Species,y=d_new$Height,fill=d_new$ï..Species))+geom_boxplot()
+```
+
+
+
+
+
+
+```{r}
+library(caTools)
+```
+
+
+```{r}
+#USe caret function createDataPartition to create train and test dataset (0.7: 0.3)
+#LET the rows with missing NAs be the test set
+split <- sample.split(d$Weight, SplitRatio = 0.7)
+# Training set
+train = subset(d,split=TRUE)
+# Testing dataset
+test = subset(d,split=FALSE)
+head(train)
+head(test)
+dim(train)
+dim(test)
+summary(train)
+summary(test)
+```
+
+```{r}
+model=lm(d$Weight~ d$Height+d$Width+d$Length3+d$Length1, data=d)
+summary(model)
+```
+
+```{r}
+predicted_values <- predict(model, test[,-3], type = "response")
+head(predicted_values)
+```
