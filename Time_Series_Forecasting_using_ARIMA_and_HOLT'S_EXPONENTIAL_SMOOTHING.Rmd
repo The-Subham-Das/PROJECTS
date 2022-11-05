@@ -1,0 +1,247 @@
+---
+title: "Time Series Forecasting with Rice Production in INDIA Dataset"
+author: "Subham Das"
+date: '2022-11-05'
+output: html_document
+---
+
+
+Taking the Rice-Production Dataset
+
+```{r}
+library(readxl)
+Book1 <- read_excel("D:\\DATASETS\\Rice_prod.xlsx")
+Book1
+```
+
+Making it as a Time-Series Dataset.
+
+```{r}
+Rice_production=ts(Book1$`Rice production`,start=1950,end=2020,frequency = 1)
+```
+
+
+Time-Series plot of the Data
+
+```{r}
+library(tseries)
+ts.plot(Rice_production,main='Rice production in India', xlab='Years', ylab='Production', col='darkblue')
+```
+We can easily see that in this dataset only Trend component is present and no Seasonal component is present.
+
+
+
+ACF of the Dataset
+
+```{r}
+library(forecast)
+Acf(Rice_production)
+```
+As we can see that the 12th lag is less than the 13th lag.
+If seasonality is there the 13th lag should be greater than 12th lag.
+So, we can say that in our dataset there is no Seasonal component.
+
+
+
+Null Hypothesis: The series is non-stationary
+Alternate Hypothesis: The series is stationary
+
+
+```{r}
+adf.test(Rice_production)
+```
+
+Since p value obtained 0.7145 which is greater than 5% significance level, we could conclude that the data is non-stationary.
+
+
+
+**if the data has Trend and Seasonal component both, we can use SARIMA & Winters.**
+
+**if we remove Seasonality component, we can use ARIMA and Holt's Exponential.**
+
+**and if we remove Trend & Seasonality both, we can use ARMA & Simple Exponential as the data will be Stationary then.**
+
+```{r}
+length(Rice_production)
+```
+
+```{r}
+Rice_production1=Rice_production[1:66]   # for in-sample forecasting
+Rice_production2=ts(Rice_production1,start=1950,frequency=1)
+class(Rice_production2)
+```
+
+
+**HOLT'S EXPONENTIAL SMOOTHING**
+
+```{r}
+library(astsa)
+rice_prod_for=HoltWinters(Rice_production2,gamma = FALSE) 
+rice_prod_for
+
+#gamma is False because no seasonal component is present
+```
+
+
+```{r}
+plot(rice_prod_for)
+```
+
+
+In-sample Forecasting
+
+```{r}
+library(forecast)
+forecast_data=forecast(rice_prod_for,h=5)
+forecast_data
+```
+
+
+```{r}
+library(Metrics)
+actual_rice_production=c(1097, 1128, 1165, 1189, 1223)
+predict_rice_production=c(1080.614, 1095.139, 1109.663, 1124.188, 1138.713)
+```
+
+**Root Mean Squared Error**
+
+```{r}
+result_1=rmse(actual_rice_production,predict_rice_production)
+result_1
+```
+
+**Mean Absolute Percentage Error**
+
+```{r}
+result_2=mape(actual_rice_production,predict_rice_production)
+result_2
+```
+
+**Mean Absolute Scaled Error**
+
+```{r}
+result_3=mase(actual_rice_production,predict_rice_production)
+result_3
+```
+
+
+**RESIDUAL ANALYSIS : HOLTS EXPONENTIAL SMOOTHING**
+
+```{r}
+#non-coliinearity check
+res <- resid(forecast_data)
+Box.test(res, type = "Ljung-Box")
+```
+
+
+```{r}
+forecast::checkresiduals(forecast_data)
+```
+
+```{r}
+# normality test
+shapiro.test(res)
+```
+
+
+**ARIMA MODEL**
+
+```{r}
+library(forecast)
+fit=auto.arima(Rice_production2)
+fit
+```
+
+In-sample Forecasting
+
+```{r}
+forecast_rice_production<-forecast(fit,h=5)
+forecast_rice_production
+```
+
+```{r}
+library(Metrics)
+actual_rice_production=c(1097, 1128, 1165, 1189, 1223)
+predict_rice_production=c(1075.780, 1088.965, 1102.149, 1115.334, 1128.519)
+```
+
+
+**Root Mean Squared Error**
+
+```{r}
+result_1=rmse(actual_rice_production,predict_rice_production)
+result_1
+```
+
+**Mean Absolute Percentage Error**
+
+```{r}
+result_2=mape(actual_rice_production,predict_rice_production)
+result_2
+```
+
+**Mean Absolute Scaled Error**
+
+```{r}
+result_3=mase(actual_rice_production,predict_rice_production)
+result_3
+```
+
+
+**RESIDUAL ANALYSIS: ARIMA**
+
+```{r}
+res <- resid(fit)
+Box.test(res, type = "Ljung-Box")
+```
+
+```{r}
+forecast::checkresiduals(fit)
+```
+
+```{r}
+# normality test
+shapiro.test(res)
+```
+
+
+As we can see that the RMSE of HOLT is less than ARIMA, we can say HOLT is the best model here.
+
+**FORECASTING USING THE BEST MODEL: HOLT**
+
+```{r}
+library(astsa)
+rice_prod_for1=HoltWinters(Rice_production,gamma = FALSE)
+library(forecast)
+forecast_data_final=forecast(rice_prod_for1,h=5)
+forecast_data_final
+```
+
+```{r}
+plot(forecast_data_final)
+```
+
+**Finally we have forecasted using Holts exponential smoothing for the next 5 years rice production in India.**
+
+
+
+**Making the data Stationary by using Method of Differencing.**
+
+```{r}
+diff_Rice_production=diff(Rice_production)
+```
+
+```{r}
+ts.plot(diff_Rice_production,main='Rice production in India', xlab='Years', ylab='Production', col='darkblue')
+```
+
+
+Null Hypothesis: The series is non-stationary
+Alternate Hypothesis: The series is stationary
+
+
+```{r}
+adf.test(diff_Rice_production)
+```
+
+Since p value obtained 0.01 which is less than 5% significance level, we could conclude that the data is stationary.
